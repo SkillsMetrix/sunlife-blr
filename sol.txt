@@ -1,7 +1,5 @@
-spring.application.name=consumer-app
-server.port=8081
-spring.kafka.consumer.bootstrap-servers=localhost:9092
-spring.kafka.consumer.group-id=group-1
-spring.kafka.consumer.auto-offset-reset=earliest
-spring.kafka.consumer.key-deserializer=org.apache.kafka.common.serialization.StringSerializer
-spring.kafka.consumer.value-deserializer=org.apache.kafka.common.serialization.StringDeserializer
+spring:
+  kafka:
+    streams:
+      bootstrap-server: "127.0.0.1:9092"
+      application-id: "spring-kafka-stream-id"
