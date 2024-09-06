@@ -1,91 +1,81 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
-	<modelVersion>4.0.0</modelVersion>
-	<parent>
-		<groupId>org.springframework.boot</groupId>
-		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>2.5.12</version>
-		<relativePath/> <!-- lookup parent from repository -->
-	</parent>
-	<groupId>com.example</groupId>
-	<artifactId>wgs-ms-client</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
-	<name>wgs-ms-client</name>
-	<description>Demo project for Spring Boot</description>
-	<properties>
-		<java.version>1.8</java.version>
-		<spring-cloud.version>2020.0.5</spring-cloud.version>
-	</properties>
-	<dependencies>
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-web</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>org.springframework.cloud</groupId>
-			<artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
-		</dependency>
+package com.service;
 
+import java.util.List;
+import java.util.stream.Collectors;
 
-	<dependency>
-			<groupId>org.springframework.cloud</groupId>
-			<artifactId>spring-cloud-starter-openfeign</artifactId>
-		</dependency>
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.client.WebClient;
 
+import com.entity.CartEntity;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.model.Product;
+import com.model.ShoppingCartRequest;
+import com.model.ShoppingCartResponse;
+import com.repo.CartRepo;
 
+@Service
+public class CartService {
+	@Autowired
+	private CartRepo repo;
+	@Autowired
+	@Qualifier("webclient")
+	private WebClient.Builder builder;
+	
+	public ShoppingCartResponse processAndRequest(Long userId, List<ShoppingCartRequest>
+	shoppingCartRequestsList) {
+		//call product API
+		ObjectMapper mapper= new ObjectMapper();
+		String productURL="http://product-service/products/loadproductsbyid/"+
+		shoppingCartRequestsList.stream()
+		.map(e-> String.valueOf(e.getProductId())).collect(Collectors.joining(","));
+		List<Product> productServiceList=builder.build()
+				.get()
+				.uri(productURL)
+				.retrieve()
+				.bodyToFlux(Product.class)
+				.collectList()
+				.block();
+		System.out.println(productURL);
+		System.out.println(productServiceList);
+		//calculate the total cost
+		final Double[] totalCost= {0.0};
+		productServiceList.forEach(psl->{
+			shoppingCartRequestsList.forEach(scr ->{
+				if(psl.getProductId()==scr.getProductId()) {
+					psl.setQuantity(scr.getQuantity());
+					totalCost[0]=totalCost[0]+ psl.getAmount()*scr.getQuantity();
+				};
+			});
+			
+		});
+		//create cart Entity
+		CartEntity cartEntity=null;
+		try {
+	 cartEntity=CartEntity.builder()
+				.userId(userId)
+				.cartId((long)(Math.random()*Math.pow(10, 10)))
+				.totalItems(productServiceList.size())
+				.totalCosts(totalCost[0])
+				.products(mapper.writeValueAsString(productServiceList))
+				.build();
+		
+		}catch (Exception e) {}
+		
+		cartEntity= repo.save(cartEntity);
+		ShoppingCartResponse response= ShoppingCartResponse.builder()
+				.cartId(cartEntity.getCartId())
+				.userId(cartEntity.getUserId())
+				.totalItems(cartEntity.getTotalItems())
+				.totalCosts(cartEntity.getTotalCosts())
+				.products(productServiceList)
+				.build();
+		
+		return response;
+		
+		
+	}
+	
 
-        <dependency>
-			<groupId>org.springframework.cloud</groupId>
-			<artifactId>spring-cloud-starter-netflix-hystrix</artifactId>
-			<version>2.2.9.RELEASE</version>
-		</dependency>
-
-
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-devtools</artifactId>
-			<scope>runtime</scope>
-			<optional>true</optional>
-		</dependency>
-		<dependency>
-			<groupId>org.projectlombok</groupId>
-			<artifactId>lombok</artifactId>
-			<optional>true</optional>
-		</dependency>
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-test</artifactId>
-			<scope>test</scope>
-		</dependency>
-	</dependencies>
-	<dependencyManagement>
-		<dependencies>
-			<dependency>
-				<groupId>org.springframework.cloud</groupId>
-				<artifactId>spring-cloud-dependencies</artifactId>
-				<version>${spring-cloud.version}</version>
-				<type>pom</type>
-				<scope>import</scope>
-			</dependency>
-		</dependencies>
-	</dependencyManagement>
-
-	<build>
-		<plugins>
-			<plugin>
-				<groupId>org.springframework.boot</groupId>
-				<artifactId>spring-boot-maven-plugin</artifactId>
-				<configuration>
-					<excludes>
-						<exclude>
-							<groupId>org.projectlombok</groupId>
-							<artifactId>lombok</artifactId>
-						</exclude>
-					</excludes>
-				</configuration>
-			</plugin>
-		</plugins>
-	</build>
-
-</project>
+}
