@@ -1,81 +1,9 @@
-package com.service;
+spring.application.name=config-server-app
 
-import java.util.List;
-import java.util.stream.Collectors;
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.stereotype.Service;
-import org.springframework.web.reactive.function.client.WebClient;
-
-import com.entity.CartEntity;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.model.Product;
-import com.model.ShoppingCartRequest;
-import com.model.ShoppingCartResponse;
-import com.repo.CartRepo;
-
-@Service
-public class CartService {
-	@Autowired
-	private CartRepo repo;
-	@Autowired
-	@Qualifier("webclient")
-	private WebClient.Builder builder;
-	
-	public ShoppingCartResponse processAndRequest(Long userId, List<ShoppingCartRequest>
-	shoppingCartRequestsList) {
-		//call product API
-		ObjectMapper mapper= new ObjectMapper();
-		String productURL="http://product-service/products/loadproductsbyid/"+
-		shoppingCartRequestsList.stream()
-		.map(e-> String.valueOf(e.getProductId())).collect(Collectors.joining(","));
-		List<Product> productServiceList=builder.build()
-				.get()
-				.uri(productURL)
-				.retrieve()
-				.bodyToFlux(Product.class)
-				.collectList()
-				.block();
-		System.out.println(productURL);
-		System.out.println(productServiceList);
-		//calculate the total cost
-		final Double[] totalCost= {0.0};
-		productServiceList.forEach(psl->{
-			shoppingCartRequestsList.forEach(scr ->{
-				if(psl.getProductId()==scr.getProductId()) {
-					psl.setQuantity(scr.getQuantity());
-					totalCost[0]=totalCost[0]+ psl.getAmount()*scr.getQuantity();
-				};
-			});
-			
-		});
-		//create cart Entity
-		CartEntity cartEntity=null;
-		try {
-	 cartEntity=CartEntity.builder()
-				.userId(userId)
-				.cartId((long)(Math.random()*Math.pow(10, 10)))
-				.totalItems(productServiceList.size())
-				.totalCosts(totalCost[0])
-				.products(mapper.writeValueAsString(productServiceList))
-				.build();
-		
-		}catch (Exception e) {}
-		
-		cartEntity= repo.save(cartEntity);
-		ShoppingCartResponse response= ShoppingCartResponse.builder()
-				.cartId(cartEntity.getCartId())
-				.userId(cartEntity.getUserId())
-				.totalItems(cartEntity.getTotalItems())
-				.totalCosts(cartEntity.getTotalCosts())
-				.products(productServiceList)
-				.build();
-		
-		return response;
-		
-		
-	}
-	
-
-}
+server.port=8012
+spring.profiles.active=git
+spring.cloud.config.server.git.uri=https://github.com/amarjeet-arora/boamsconfig
+spring.cloud.config.server.git.username=amarjeet.sn1@gmail.com
+spring.cloud.config.server.git.password=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
+spring.cloud.config.server.git.clone-on-start=true
+spring.cloud.config.server.git.default-label=main
