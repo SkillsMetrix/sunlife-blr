@@ -1,1 +1,27 @@
-https://github.com/amarjeet-arora/sunlife/blob/main/spring-mockito.zip
+
+
+import React, { useEffect, useState } from 'react';
+import axios from 'axios'
+const URL='https://jsonplaceholder.typicode.com/users'
+function RestApp(props) {
+
+    const[users,setUsers]= useState([])
+
+    useEffect(()=>{
+     axios.get(URL).then((res)=>res.data)
+     .then((data)=>{
+         setUsers(data)
+     })
+    },[])
+    return (
+        <div>
+           {users.map((dt)=>(
+            <div>
+                {dt.name} --- {dt.email}
+            </div>
+           ))} 
+        </div>
+    );
+}
+
+export default RestApp;
