@@ -1,3 +1,47 @@
+import { useDispatch, useSelector } from "react-redux";
+import React, { useEffect } from "react";
+import { fetchUsers } from "../redux/restSlice";
+
+function UserList(props) {
+  const dispatch = useDispatch();
+  const usersData = useSelector((state) => state.rest.entities);
+
+ 
+  return (
+    <div>
+      <p>User Data</p>
+      <button onClick={()=>dispatch(fetchUsers())}>Load Users</button>
+      <div>
+        <table class="table">
+          <thead>
+            <tr>
+              <th scope="col">#</th>
+              <th scope="col">Name</th>
+              <th scope="col">Email</th>
+            </tr>
+          </thead>
+          <tbody>
+            {usersData.map((data) => (
+              <tr>
+                <td>{data.id}</td>
+                <td>{data.name}</td>
+                <td>{data.email}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+export default UserList;
+
+
+
+----------
+
+
 import React, { useState } from "react";
 
 function AddUser(props) {
@@ -14,12 +58,7 @@ function AddUser(props) {
   };
   return (
     <div>
-      <div>
-        <p>Users Data!</p>
-        {users.map((data) => (
-          <div>{data.name}---{data.email}</div>
-        ))}
-      </div>
+     
       <form onSubmit={addUser}>
         UserName:{" "}
         <input
@@ -32,7 +71,7 @@ function AddUser(props) {
         value={email}
         onChange={(e) => setEmail(e.target.value)}
         />
-        <button>Add User</button>
+        <button className="btn btn-primary">Add User</button>
       </form>
     </div>
   );
