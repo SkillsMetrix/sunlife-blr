@@ -1,42 +1,179 @@
 import React, { useState } from "react";
+import { useDispatch, useSelector } from 'react-redux'
 import {useNavigate} from 'react-router-dom'
-import '../errors.css'
+import { usersAdded } from "../redux/restSlice";
+function AddUser(props) {
+  const dispatch= useDispatch()
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+const navigate= useNavigate()
+  const dataLength=useSelector(state=> state.rest.entities.length)
 
-function Login(props) {
-    const [users, setUsers] = useState([]);
-    const [errors,setErrors]= useState({})
-    const navigate= useNavigate()
-    const handleChange = (e) => {
-      setUsers({ ...users, [e.target.name]: e.target.value });
-    };
-    const login=(e)=>{
-        e.preventDefault();
-        const formError= validateForm(users)
-        setErrors(formError)
-        if(Object.keys(formError).length === 0){
+
+  const addUser = (e) => {
+    e.preventDefault();
+    dispatch(usersAdded({id:dataLength+1,name,email}))
+    setName('')
+    setEmail('')
+    navigate("/userlist")
+  };
+  return (
+    <div>
+     
+      <form onSubmit={addUser}>
+        UserName:{" "}
+        <input
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+        />
+        Email:
+        <input type="email" 
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        />
+        <button className="btn btn-primary">Add User</button>
+      </form>
+    </div>
+  );
+}
+
+export default AddUser;
+
+
+
+------------
+
+import React from "react";
+import {Link} from 'react-router-dom'
+function NavBar(props) {
+  return (
+    <div className="container">
+      <ul className="nav">
        
-            let details=JSON.parse(localStorage.getItem('sunlife'))
-            if(details.uname == users.uname && details.email==users.email){
-           navigate("/register")
-        }
-    }
-    const validateForm=(data)=>{
-      const errors={}
-      if(!data.uname){
-          errors.uname="username is required..!"
-      }
-      return errors
-    }
+        <li className="nav-item">
+          <a className="nav-link" href="#">
+            <Link to="/adduser"> Add User</Link>
+           
+          </a>
+        </li>
+        <li className="nav-item">
+          <a className="nav-link" href="#">
+          <Link to="/userlist">  User List</Link>
+          </a>
+        </li>
+        <li className="nav-item">
+        <a className="nav-link" href="edituser">
+             Edit User
+          </a>
+        </li>
+      </ul>
+    </div>
+  );
+}
+
+export default NavBar;
+
+-------
+
+
+
+import { useDispatch } from 'react-redux'
+import React, { useEffect } from 'react';
+import { fetchUsers } from '../redux/restSlice';
+import UserList from './UserList';
+import AddUser from './AddUser';
+import {useRoutes} from 'react-router-dom'
+import { routes } from '../routes';
+import NavBar from './NavBar';
+function RestClient(props) {
+const element= useRoutes(routes)  
     return (
-      <div>
-        <form onSubmit={login}>
-         UserName <input type="text" name="uname" onChange={handleChange} />
-         <p>{errors.uname && <span>{errors.uname}</span>}</p>
-         Email:<input type="email" name="email" onChange={handleChange} />
-          <button className="btn btn-primary">Login</button>
-        </form>
-      </div>
+        <div>
+            <NavBar/>
+            <hr/>
+            {element}
+        </div>
     );
 }
+
+export default RestClient;
+
+
+--------
+
+import { useDispatch, useSelector } from "react-redux";
+import React, { useEffect } from "react";
+import { fetchUsers, userDeleted } from "../redux/restSlice";
+
+function UserList(props) {
+  const dispatch = useDispatch();
+  const usersData = useSelector((state) => state.rest.entities);
+
+ 
+  return (
+    <div>
+      <p>User Data</p>
+      <button onClick={()=>dispatch(fetchUsers())}>Load Users</button>
+      <div>
+        <table class="table">
+          <thead>
+            <tr>
+              <th scope="col">#</th>
+              <th scope="col">Name</th>
+              <th scope="col">Email</th>
+            </tr>
+          </thead>
+          <tbody>
+            {usersData.map((data) => (
+              <tr>
+                <td>{data.id}</td>
+                <td>{data.name}</td>
+                <td>{data.email}</td>
+                <td><button onClick={()=> dispatch(userDeleted(data.id))}>Delete</button></td>
+              
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
 }
-export default Login;
+
+export default UserList;
+
+
+-------
+import React from "react";
+import ReactDOM from "react-dom/client";
+import "./index.css";
+import App from "./App";
+import reportWebVitals from "./reportWebVitals";
+import { Provider } from "react-redux";
+import appStore from "./redux/store";
+import { BrowserRouter } from "react-router-dom";
+const root = ReactDOM.createRoot(document.getElementById("root"));
+root.render(
+  <BrowserRouter>
+    <Provider store={appStore}>
+      <App />
+    </Provider>
+  </BrowserRouter>
+);
+
+reportWebVitals();
+
+
+-------
+import AddUser from "./components/AddUser";
+import UserList from "./components/UserList";
+
+ 
+
+
+
+export const routes=[
+    {path: '/adduser' , element:<AddUser/>},
+    {path: '/userlist' , element:<UserList/>}
+]
